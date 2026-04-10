@@ -1,0 +1,14 @@
+sky:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    host: localhost
+    port: 3306
+    database: sky_take_out
+    username: root
+    password: root  # ← 加上这行，注意冒号后面有一个空格！
+
+  alioss:
+    endpoint: ${SKY_ALIOSS_ENDPOINT}
+    access-key-id: ${SKY_ALIOSS_ID}
+    access-key-secret: ${SKY_ALIOSS_SECRET}
+    bucket-name: ${SKY_ALIOSS_BUCKET}
