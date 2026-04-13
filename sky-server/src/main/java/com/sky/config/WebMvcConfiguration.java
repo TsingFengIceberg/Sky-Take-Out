@@ -1,6 +1,7 @@
 package com.sky.config;
 
 import com.sky.interceptor.JwtTokenAdminInterceptor;
+import com.sky.interceptor.JwtTokenUserInterceptor;
 import com.sky.json.JacksonObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,9 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
     @Autowired
     private JwtTokenAdminInterceptor jwtTokenAdminInterceptor;
 
+    @Autowired
+    private JwtTokenUserInterceptor jwtTokenUserInterceptor;
+
     /**
      * 注册自定义拦截器
      *
@@ -40,7 +44,14 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
         registry.addInterceptor(jwtTokenAdminInterceptor)
                 .addPathPatterns("/admin/**")
                 .excludePathPatterns("/admin/employee/login");
+
+        // 👇 加上这段：注册用户端拦截器
+        registry.addInterceptor(jwtTokenUserInterceptor)
+                .addPathPatterns("/user/**")                 // 拦截所有 /user 开头的请求
+                .excludePathPatterns("/user/user/login")     // 排除登录接口（没登录怎么出示通行证对吧？）
+                .excludePathPatterns("/user/shop/status");   // 排除查看营业状态接口（不登录也能看店开没开门）
     }
+
 
     /**
      * 通过knife4j生成接口文档
@@ -86,5 +97,7 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
         // 3. 将我们自己的转换器放入 Spring 容器中，并且索引设为 0 (排在最前面，优先使用)
         converters.add(0, converter);
     }
+
+
 
 }
