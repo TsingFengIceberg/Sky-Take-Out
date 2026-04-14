@@ -1,3 +1,8 @@
+package com.sky.service.impl; // 👇 1. 补上它自己的户口本！必须在第一行！
+
+import com.sky.mapper.OrderMapper;       // 👇 2. 提前补上这两个 Mapper 的进口许可证
+import com.sky.mapper.OrderDetailMapper; // 👇 3. 避免一会儿接着报错
+
 import com.sky.constant.MessageConstant;
 import com.sky.context.BaseContext;
 import com.sky.dto.OrdersSubmitDTO;
@@ -9,6 +14,7 @@ import com.sky.exception.AddressBookBusinessException;
 import com.sky.exception.ShoppingCartBusinessException;
 import com.sky.mapper.AddressBookMapper;
 import com.sky.mapper.ShoppingCartMapper;
+import com.sky.service.OrderService;
 import com.sky.vo.OrderSubmitVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -67,6 +73,14 @@ public class OrderServiceImpl implements OrderService {
         orders.setUserId(userId);
         orders.setAddress(addressBook.getProvinceName() + addressBook.getCityName() + addressBook.getDistrictName() + addressBook.getDetail());
 
+        // 👇 补上这关键的一行！
+        // 在苍穹外卖业务中，新订单的派送状态默认为“待付款/未开始”，通常给 0 或 1
+        // 这里我们直接给它一个初始状态，防止数据库报非空约束错误
+        orders.setDeliveryStatus(1);
+
+        // 🚨 顺便检查一下：如果你数据库里 estimated_delivery_time 也是非空，
+        orders.setEstimatedDeliveryTime(LocalDateTime.now().plusHours(1));
+
         orderMapper.insert(orders); // 🚨 这里插入后要记得主键回填！因为后面明细表要用到这个订单ID
 
         // 3. 向订单明细表插入n条数据
@@ -92,4 +106,28 @@ public class OrderServiceImpl implements OrderService {
 
         return vo;
     }
+
+    /**
+     * 订单支付成功，修改订单状态
+     *
+     * @param outTradeNo
+     */
+    public void paySuccess(String outTradeNo) {
+        // 根据前端传来的订单号，查出这个订单
+        Orders ordersDB = orderMapper.getByNumber(outTradeNo);
+
+        if (ordersDB != null) {
+            // 组装要修改的数据，把状态改成 2（待接单），支付状态改成 1（已支付）
+            Orders orders = Orders.builder()
+                    .id(ordersDB.getId())
+                    .status(Orders.TO_BE_CONFIRMED)
+                    .payStatus(Orders.PAID)
+                    .checkoutTime(LocalDateTime.now())
+                    .build();
+
+            // 执行更新
+            orderMapper.update(orders);
+        }
+    }
+
 }

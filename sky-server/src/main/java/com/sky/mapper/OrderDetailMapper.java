@@ -1,3 +1,5 @@
+package com.sky.mapper; // 👈 户口本！
+
 import com.sky.entity.OrderDetail;
 import org.apache.ibatis.annotations.Mapper;
 
