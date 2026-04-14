@@ -38,7 +38,7 @@ public class UserController {
      */
     @PostMapping("/login")
     @ApiOperation("微信登录")
-    public Result<UserLoginVO> login(@RequestBody UserLoginDTO userLoginDTO) {
+    public Result<UserLoginVO> login(UserLoginDTO userLoginDTO) {
         log.info("微信用户登录：{}", userLoginDTO.getCode());
 
         // 1. 调用 Service，实现微信登录逻辑（去微信服务器换取 openid 并注册/查询数据库）

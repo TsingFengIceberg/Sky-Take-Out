@@ -30,44 +30,46 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
 
     /**
      * 添加购物车
+     *
      * @param shoppingCartDTO
      */
     @Override
     public void addShoppingCart(ShoppingCartDTO shoppingCartDTO) {
-        // 1. 创建购物车对象，并塞入当前用户的 ID（重点！体现了拦截器的价值）
+        // 1. 判断当前加入到购物车的商品是否已经存在了
         ShoppingCart shoppingCart = new ShoppingCart();
         BeanUtils.copyProperties(shoppingCartDTO, shoppingCart);
+        // 重要：获取当前微信用户的 id (这个是从你刚才配置成功的 JWT token 里解析出来的！)
         Long userId = BaseContext.getCurrentId();
         shoppingCart.setUserId(userId);
 
-        // 2. 判断当前加入到购物车的商品是否已经存在了
-        // 这里需要写一个动态查询：根据 userId 和 (dishId+flavor 或者 setmealId) 去查
+        // 去数据库查一下，这个用户的购物车里有没有这道菜（条件：userId, dishId, setmealId, dishFlavor）
         List<ShoppingCart> list = shoppingCartMapper.list(shoppingCart);
 
-        // 3. 如果已经存在了，只需要将数量加一
+        // 2. 如果已经存在了，只需要将数量加一
         if (list != null && list.size() > 0) {
             ShoppingCart cart = list.get(0);
-            cart.setNumber(cart.getNumber() + 1); // 数量加1
-            shoppingCartMapper.updateNumberById(cart); // 更新数据库
+            cart.setNumber(cart.getNumber() + 1); // 数量加一
+            shoppingCartMapper.updateNumberById(cart); // 更新数据库里的数量
         } else {
-            // 4. 如果不存在，需要插入一条新的购物车数据
+            // 3. 如果不存在，需要插入一条购物车数据
 
-            // 判断本次添加到购物车的是菜品还是套餐，我们需要查出它们的名字、图片、价格存入购物车表
+            // 判断本次添加到购物车的是菜品还是套餐
             Long dishId = shoppingCartDTO.getDishId();
             if (dishId != null) {
-                // 本次添加的是菜品
+                // 本次添加到购物车的是菜品
                 Dish dish = dishMapper.getById(dishId);
                 shoppingCart.setName(dish.getName());
                 shoppingCart.setImage(dish.getImage());
                 shoppingCart.setAmount(dish.getPrice());
             } else {
-                // 本次添加的是套餐
+                // 本次添加到购物车的是套餐
                 Long setmealId = shoppingCartDTO.getSetmealId();
                 Setmeal setmeal = setmealMapper.getById(setmealId);
                 shoppingCart.setName(setmeal.getName());
                 shoppingCart.setImage(setmeal.getImage());
                 shoppingCart.setAmount(setmeal.getPrice());
             }
+            // 设置默认数量为 1 和创建时间
             shoppingCart.setNumber(1);
             shoppingCart.setCreateTime(LocalDateTime.now());
 
@@ -75,4 +77,58 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
             shoppingCartMapper.insert(shoppingCart);
         }
     }
+
+    /**
+     * 查看购物车
+     * @return
+     */
+    @Override
+    public List<ShoppingCart> showShoppingCart() {
+        // 获取当前微信用户的id
+        Long userId = BaseContext.getCurrentId();
+        ShoppingCart shoppingCart = ShoppingCart.builder()
+                .userId(userId)
+                .build();
+        return shoppingCartMapper.list(shoppingCart);
+    }
+
+    /**
+     * 清空购物车
+     */
+    @Override
+    public void cleanShoppingCart() {
+        // 获取当前微信用户的id
+        Long userId = BaseContext.getCurrentId();
+        shoppingCartMapper.deleteByUserId(userId);
+    }
+
+    /**
+     * 减少购物车商品
+     * @param shoppingCartDTO
+     */
+    @Override
+    public void subShoppingCart(ShoppingCartDTO shoppingCartDTO) {
+        ShoppingCart shoppingCart = new ShoppingCart();
+        BeanUtils.copyProperties(shoppingCartDTO, shoppingCart);
+        // 设置当前用户id
+        shoppingCart.setUserId(BaseContext.getCurrentId());
+
+        // 查出该商品
+        List<ShoppingCart> list = shoppingCartMapper.list(shoppingCart);
+
+        if (list != null && list.size() > 0) {
+            shoppingCart = list.get(0);
+
+            Integer number = shoppingCart.getNumber();
+            if (number == 1) {
+                // 如果当前商品数量为1，直接删除记录
+                shoppingCartMapper.deleteById(shoppingCart.getId());
+            } else {
+                // 如果当前商品数量大于1，修改数量减1
+                shoppingCart.setNumber(shoppingCart.getNumber() - 1);
+                shoppingCartMapper.updateNumberById(shoppingCart);
+            }
+        }
+    }
+
 }
