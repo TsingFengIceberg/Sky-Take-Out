@@ -1,5 +1,6 @@
 package com.sky.service.impl; // 👇 1. 补上它自己的户口本！必须在第一行！
 
+import com.alibaba.fastjson.JSON;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.sky.dto.*;
@@ -22,6 +23,7 @@ import com.sky.service.OrderService;
 import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
+import com.sky.websocket.WebSocketServer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,6 +49,9 @@ public class OrderServiceImpl implements OrderService {
     private ShoppingCartMapper shoppingCartMapper;
     @Autowired
     private AddressBookMapper addressBookMapper;
+
+    @Autowired
+    private WebSocketServer webSocketServer; // 🚨 检查这里的名字是不是叫这个
 
     /**
      * 用户下单
@@ -135,6 +142,16 @@ public class OrderServiceImpl implements OrderService {
             // 执行更新
             orderMapper.update(orders);
         }
+
+        // 🚨 重点：给管理端发消息
+        Map map = new HashMap();
+        map.put("type", 1); // 1-新订单，2-用户催单
+        map.put("orderId", ordersDB.getId());
+        map.put("content", "订单号：" + outTradeNo);
+
+        String json = JSON.toJSONString(map);
+        webSocketServer.sendToAllClient(json); // 📢 喊话：老板，来活了！
+
     }
 
 
