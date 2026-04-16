@@ -10,6 +10,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,6 +34,7 @@ public class SetmealController {
      */
     @PostMapping
     @ApiOperation("新增套餐")
+    @CacheEvict(cacheNames = "setmealCache", key = "#setmealDTO.categoryId") // 🚨 清理指定分类的缓存
     public Result save(@RequestBody SetmealDTO setmealDTO) {
         log.info("新增套餐：{}", setmealDTO);
         setmealService.saveWithDish(setmealDTO);
@@ -46,6 +48,7 @@ public class SetmealController {
      */
     @GetMapping("/page")
     @ApiOperation("分页查询")
+    @CacheEvict(cacheNames = "setmealCache", allEntries = true) // 🚨 简单粗暴，清理所有套餐缓存
     public Result<PageResult> page(SetmealPageQueryDTO setmealPageQueryDTO) {
         log.info("套餐分页查询: {}", setmealPageQueryDTO);
         PageResult pageResult = setmealService.pageQuery(setmealPageQueryDTO);
